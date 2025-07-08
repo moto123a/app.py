@@ -82,10 +82,10 @@ if selected_goal_id:
     monthly_usd = monthly_inr / exchange_rate
     yearly_usd = yearly_inr / exchange_rate
 
-    st.metric("Daily Send Target", f"${daily_usd:,.2f} → ₹{daily_inr:,.0f}")
-    st.metric("Weekly Send Target", f"${weekly_usd:,.2f} → ₹{weekly_inr:,.0f}")
-    st.metric("Monthly Send Target", f"${monthly_usd:,.2f} → ₹{monthly_inr:,.0f}")
-    st.metric("Yearly Total (USD)", f"${yearly_usd:,.2f}")
+    st.metric("Daily Send Target", f"${daily_usd:,.2f} → ₹{daily_inr:,.0f} ({days} days)")
+    st.metric("Weekly Send Target", f"${weekly_usd:,.2f} → ₹{weekly_inr:,.0f} ({weeks} weeks)")
+    st.metric("Monthly Send Target", f"${monthly_usd:,.2f} → ₹{monthly_inr:,.0f} ({months} months)")
+    st.metric("Yearly Total (USD)", f"${yearly_usd:,.2f} → ₹{yearly_inr:,.0f} ({years:.1f} years)")
 
     # Log Payment
     st.subheader("💵 Log a Payment")
@@ -141,10 +141,10 @@ if selected_goal_id:
             weekly_usd = daily_usd * 7
             monthly_usd = daily_usd * 30
 
-        st.metric("Daily", f"${daily_usd:,.2f} → ₹{daily_usd * exchange_rate:,.0f}")
-        st.metric("Weekly", f"${weekly_usd:,.2f} → ₹{weekly_usd * exchange_rate:,.0f}")
-        st.metric("Monthly", f"${monthly_usd:,.2f} → ₹{monthly_usd * exchange_rate:,.0f}")
-        st.metric("Yearly", f"${yearly_usd:,.2f} → ₹{yearly_usd * exchange_rate:,.0f}")
+        st.metric("Daily", f"${daily_usd:,.2f} → ₹{daily_usd * exchange_rate:,.0f} ({days} days)")
+        st.metric("Weekly", f"${weekly_usd:,.2f} → ₹{weekly_usd * exchange_rate:,.0f} ({weeks} weeks)")
+        st.metric("Monthly", f"${monthly_usd:,.2f} → ₹{monthly_usd * exchange_rate:,.0f} ({months} months)")
+        st.metric("Yearly", f"${yearly_usd:,.2f} → ₹{yearly_usd * exchange_rate:,.0f} ({years:.1f} years)")
     else:
         daily_needed_inr = remaining / days if days > 0 else 0
         daily_needed_usd = daily_needed_inr / exchange_rate if exchange_rate > 0 else 0
@@ -157,10 +157,10 @@ if selected_goal_id:
 
         yearly_needed_usd = remaining / exchange_rate / years if years > 0 else 0
 
-        st.metric("Daily Goal", f"${daily_needed_usd:,.2f} → ₹{daily_needed_inr:,.0f}")
-        st.metric("Weekly Goal", f"${weekly_needed_usd:,.2f} → ₹{weekly_needed_inr:,.0f}")
-        st.metric("Monthly Goal", f"${monthly_needed_usd:,.2f} → ₹{monthly_needed_inr:,.0f}")
-        st.metric("Yearly Goal", f"${yearly_needed_usd:,.2f} → ₹{remaining:,.0f}")
+        st.metric("Daily Goal", f"${daily_needed_usd:,.2f} → ₹{daily_needed_inr:,.0f} ({days} days)")
+        st.metric("Weekly Goal", f"${weekly_needed_usd:,.2f} → ₹{weekly_needed_inr:,.0f} ({weeks} weeks)")
+        st.metric("Monthly Goal", f"${monthly_needed_usd:,.2f} → ₹{monthly_needed_inr:,.0f} ({months} months)")
+        st.metric("Yearly Goal", f"${yearly_needed_usd:,.2f} → ₹{remaining:,.0f} ({years:.1f} years)")
         st.caption("“Keep going — every ₹ counts!”")
 else:
     st.warning("No goal selected. Please create or select one from the sidebar.")
