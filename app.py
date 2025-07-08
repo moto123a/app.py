@@ -1,3 +1,4 @@
+# --- app.py ---
 import streamlit as st
 import sqlite3
 from datetime import datetime
@@ -28,7 +29,7 @@ c_rates = CurrencyRates()
 try:
     exchange_rate = c_rates.get_rate('USD', 'INR')
 except:
-    exchange_rate = 83.0
+    exchange_rate = 83.0  # fallback
 
 # ========== SELECT GOAL ==========
 st.sidebar.header("🎯 Your Financial Goals")
@@ -141,11 +142,30 @@ if selected_goal_id:
             weekly_usd = daily_usd * 7
             monthly_usd = daily_usd * 30
 
-        st.metric("Daily", f"${daily_usd:,.2f} → ₹{daily_usd * exchange_rate:,.0f} ({days} days)")
-        st.metric("Weekly", f"${weekly_usd:,.2f} → ₹{weekly_usd * exchange_rate:,.0f} ({weeks} weeks)")
-        st.metric("Monthly", f"${monthly_usd:,.2f} → ₹{monthly_usd * exchange_rate:,.0f} ({months} months)")
-        st.metric("Yearly", f"${yearly_usd:,.2f} → ₹{yearly_usd * exchange_rate:,.0f} ({years:.1f} years)")
+        # Duration Estimate
+        total_inr = amount_inr
+        if daily_usd > 0:
+            daily_inr = daily_usd * exchange_rate
+            total_days = total_inr / daily_inr
+            total_weeks = total_days / 7
+            total_months = total_days / 30
+            total_years = total_days / 365
+
+            st.info(f"To reach ₹{total_inr:,.0f}, you'll need approximately:")
+            st.markdown(f"""
+            - 🗓️ **{total_days:.0f} days**
+            - 📆 **{total_weeks:.1f} weeks**
+            - 📆 **{total_months:.1f} months**
+            - 📅 **{total_years:.2f} years**
+            """)
+
+        st.metric("Daily", f"${daily_usd:,.2f} → ₹{daily_usd * exchange_rate:,.0f}")
+        st.metric("Weekly", f"${weekly_usd:,.2f} → ₹{weekly_usd * exchange_rate:,.0f}")
+        st.metric("Monthly", f"${monthly_usd:,.2f} → ₹{monthly_usd * exchange_rate:,.0f}")
+        st.metric("Yearly", f"${yearly_usd:,.2f} → ₹{yearly_usd * exchange_rate:,.0f}")
+
     else:
+        # Auto target suggestion
         daily_needed_inr = remaining / days if days > 0 else 0
         daily_needed_usd = daily_needed_inr / exchange_rate if exchange_rate > 0 else 0
 
