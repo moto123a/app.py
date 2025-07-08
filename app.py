@@ -67,16 +67,21 @@ st.metric("Per Year: Send", f"${yearly_usd_needed:,.2f}")
 
 # Step 3: Payment Logging
 st.header("3️⃣ Log Your Weekly USD Payment")
-with st.form("payment_form"):
-    usd_sent = st.number_input("USD Sent This Week", min_value=0.0, step=1.0)
-    pay_date = st.date_input("Date", value=datetime.today())
-    submitted = st.form_submit_button("Log Payment")
-    if submitted:
-        inr_equiv = usd_sent * exchange_rate
-        c.execute("INSERT INTO payments (date, usd_sent, inr_equiv) VALUES (?, ?, ?)",
-                  (pay_date.strftime("%Y-%m-%d"), usd_sent, inr_equiv))
-        conn.commit()
-        st.success("✅ Payment logged successfully!")
+
+if total_loan_inr > 0 and repay_years > 0:
+    with st.form("payment_form"):
+        usd_sent = st.number_input("USD Sent This Week", min_value=0.0, step=1.0)
+        pay_date = st.date_input("Date", value=datetime.today())
+        submitted = st.form_submit_button("Log Payment")
+
+        if submitted:
+            inr_equiv = usd_sent * exchange_rate
+            c.execute("INSERT INTO payments (date, usd_sent, inr_equiv) VALUES (?, ?, ?)",
+                      (pay_date.strftime("%Y-%m-%d"), usd_sent, inr_equiv))
+            conn.commit()
+            st.success("✅ Payment logged successfully!")
+else:
+    st.warning("⚠️ Please enter your loan amount and repayment years first.")
 
 # Step 4: Show Progress
 st.header("4️⃣ Payment Progress")
