@@ -122,5 +122,13 @@ elif remaining_inr <= 0:
     st.success("🎉 Loan fully paid! You did it!")
 else:
     st.warning("Please set your repayment years to calculate daily target.")
+# ---------------- RESET BUTTON ----------------
+st.sidebar.header("🧹 Reset All Data")
+if st.sidebar.button("🔄 Reset My Loan & Payments"):
+    # Clear the database
+    c.execute("DELETE FROM payments")
+    conn.commit()
+    st.success("✅ All payment history cleared. You can now start a new loan!")
+
 
 
