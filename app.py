@@ -135,7 +135,7 @@ if selected_goal_id:
             daily_usd = monthly_usd / 30
             weekly_usd = daily_usd * 7
             yearly_usd = daily_usd * 365
-        else:  # Yearly
+        else:
             yearly_usd = input_usd
             daily_usd = yearly_usd / 365
             weekly_usd = daily_usd * 7
@@ -145,11 +145,6 @@ if selected_goal_id:
         st.metric("Weekly", f"${weekly_usd:,.2f} → ₹{weekly_usd * exchange_rate:,.0f}")
         st.metric("Monthly", f"${monthly_usd:,.2f} → ₹{monthly_usd * exchange_rate:,.0f}")
         st.metric("Yearly", f"${yearly_usd:,.2f} → ₹{yearly_usd * exchange_rate:,.0f}")
-
-        st.metric("Daily", f"${custom_daily_usd:,.2f} → ₹{custom_daily_usd * exchange_rate:,.0f}")
-        st.metric("Weekly", f"${custom_weekly_usd:,.2f} → ₹{custom_weekly_usd * exchange_rate:,.0f}")
-        st.metric("Monthly", f"${custom_monthly_usd:,.2f} → ₹{custom_monthly_usd * exchange_rate:,.0f}")
-        st.metric("Yearly", f"${custom_yearly_usd:,.2f} → ₹{custom_yearly_usd * exchange_rate:,.0f}")
     else:
         daily_needed_inr = remaining / days if days > 0 else 0
         daily_needed_usd = daily_needed_inr / exchange_rate if exchange_rate > 0 else 0
