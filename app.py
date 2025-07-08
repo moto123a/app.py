@@ -76,29 +76,34 @@ if selected_goal_id:
     st.write(f"**Paid:** ₹{total_paid:,.0f} / ₹{amount_inr:,.0f} ({percent:.2f}%)")
     st.write(f"**Remaining:** ₹{remaining:,.0f}")
 
-    # Custom Targets Section
-    st.subheader("📅 Custom Earning Targets")
-    use_custom_target = st.checkbox("✏️ Set your own earning target")
+    # Custom Targets Section (in INR)
+    st.subheader("📅 Custom Earning Targets in INR")
+    use_custom_target = st.checkbox("✏️ Set your own earning target in INR")
     if use_custom_target:
         option = st.selectbox("Enter one of the following:", ["Daily", "Weekly", "Monthly", "Yearly"])
-        usd_value = st.number_input(f"Enter your {option} USD goal", min_value=0.0)
+        inr_value = st.number_input(f"Enter your {option} INR earning goal", min_value=0.0)
 
         if option == "Daily":
-            daily_usd = usd_value
+            daily_inr = inr_value
         elif option == "Weekly":
-            daily_usd = usd_value / 7
+            daily_inr = inr_value / 7
         elif option == "Monthly":
-            daily_usd = usd_value / 30
+            daily_inr = inr_value / 30
         else:
-            daily_usd = usd_value / 365
+            daily_inr = inr_value / 365
 
         # Derived values
-        weekly_usd = daily_usd * 7
-        monthly_usd = daily_usd * 30
-        yearly_usd = daily_usd * 365
+        weekly_inr = daily_inr * 7
+        monthly_inr = daily_inr * 30
+        yearly_inr = daily_inr * 365
+
+        # Convert to USD
+        daily_usd = daily_inr / exchange_rate
+        weekly_usd = weekly_inr / exchange_rate
+        monthly_usd = monthly_inr / exchange_rate
+        yearly_usd = yearly_inr / exchange_rate
 
         # Duration Estimate
-        daily_inr = daily_usd * exchange_rate
         total_days = amount_inr / daily_inr if daily_inr > 0 else 0
         total_weeks = total_days / 7
         total_months = total_days / 30
@@ -112,10 +117,10 @@ if selected_goal_id:
         - 🕒 **{total_years:.2f} years**
         """)
 
-        st.metric("Daily", f"${daily_usd:,.2f} → ₹{daily_usd * exchange_rate:,.0f}")
-        st.metric("Weekly", f"${weekly_usd:,.2f} → ₹{weekly_usd * exchange_rate:,.0f}")
-        st.metric("Monthly", f"${monthly_usd:,.2f} → ₹{monthly_usd * exchange_rate:,.0f}")
-        st.metric("Yearly", f"${yearly_usd:,.2f} → ₹{yearly_usd * exchange_rate:,.0f}")
+        st.metric("Daily", f"₹{daily_inr:,.0f} → ${daily_usd:,.2f}")
+        st.metric("Weekly", f"₹{weekly_inr:,.0f} → ${weekly_usd:,.2f}")
+        st.metric("Monthly", f"₹{monthly_inr:,.0f} → ${monthly_usd:,.2f}")
+        st.metric("Yearly", f"₹{yearly_inr:,.0f} → ${yearly_usd:,.2f}")
 
 else:
     st.warning("No goal selected. Please create one from the sidebar.")
