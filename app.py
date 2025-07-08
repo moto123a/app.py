@@ -4,131 +4,123 @@ from datetime import datetime
 from forex_python.converter import CurrencyRates
 from num2words import num2words
 
-# Get live USD to INR rate
-c_rates = CurrencyRates()
-try:
-    exchange_rate = c_rates.get_rate('USD', 'INR')
-except:
-    exchange_rate = 83.0  # fallback
-
-# Connect to DB
-conn = sqlite3.connect('loan_data.db', check_same_thread=False)
+# ========== DB SETUP ==========
+conn = sqlite3.connect('finance_goals.db', check_same_thread=False)
 c = conn.cursor()
+c.execute('''CREATE TABLE IF NOT EXISTS goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    amount REAL,
+    currency TEXT,
+    years REAL
+)''')
 c.execute('''CREATE TABLE IF NOT EXISTS payments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    goal_id INTEGER,
     date TEXT,
     usd_sent REAL,
     inr_equiv REAL
 )''')
+conn.commit()
 
-# App title
-st.title("💸 Loan Payoff Calculator & USD Tracker")
+# ========== EXCHANGE RATE ==========
+c_rates = CurrencyRates()
+try:
+    exchange_rate = c_rates.get_rate('USD', 'INR')
+except:
+    exchange_rate = 83.0
 
-# Step 1: Loan Input
-st.header("1️⃣ Enter Your Loan Details")
-loan_amount = st.number_input("Enter your total loan amount", min_value=0.0, step=1000.0, format="%.2f")
-loan_currency = st.radio("Is this amount in:", ["INR", "USD"])
-if loan_currency == "USD":
-    total_loan_inr = loan_amount * exchange_rate
-    st.write(f"Converted to INR: ₹{total_loan_inr:,.0f}")
-else:
-    total_loan_inr = loan_amount
-    st.write(f"Loan in INR: ₹{total_loan_inr:,.0f}")
+# ========== SELECT GOAL ==========
+st.sidebar.header("🎯 Your Financial Goals")
+c.execute("SELECT id, title FROM goals")
+goals = c.fetchall()
+goal_titles = [f"{g[1]} (ID: {g[0]})" for g in goals]
+goal_ids = [g[0] for g in goals]
 
-loan_words = num2words(round(total_loan_inr), lang='en_IN').title()
-st.success(f"({loan_words} Rupees)")
+selected_goal_index = st.sidebar.selectbox("Select a Goal", list(range(len(goal_titles))), format_func=lambda i: goal_titles[i]) if goals else None
+selected_goal_id = goal_ids[selected_goal_index] if selected_goal_index is not None else None
 
-# Step 2: Target Period
-st.header("2️⃣ In How Many Years Will You Pay?")
-repay_years = st.number_input("Enter number of years", min_value=0.1, step=0.1, format="%.1f")
+# ========== CREATE NEW GOAL ==========
+st.sidebar.markdown("---")
+st.sidebar.subheader("➕ Create New Goal")
+with st.sidebar.form("new_goal_form"):
+    new_title = st.text_input("Title (e.g., 'Loan', 'Buy a Car')")
+    new_amount = st.number_input("Target Amount", min_value=0.0, step=1000.0, format="%.2f")
+    new_currency = st.radio("Currency", ["INR", "USD"])
+    new_years = st.number_input("Payoff Duration (Years)", min_value=0.1, step=0.1, format="%.1f")
+    create_goal = st.form_submit_button("Create Goal")
 
+if create_goal and new_title:
+    final_amount = new_amount * exchange_rate if new_currency == "USD" else new_amount
+    c.execute("INSERT INTO goals (title, amount, currency, years) VALUES (?, ?, ?, ?)",
+              (new_title, final_amount, "INR", new_years))
+    conn.commit()
+    st.success("🎉 New goal created! Refresh the page to see it in the list.")
 
-weeks = repay_years * 52
-months = repay_years * 12
-days = repay_years * 365
+# ========== SHOW SELECTED GOAL ==========
+if selected_goal_id:
+    c.execute("SELECT title, amount, years FROM goals WHERE id = ?", (selected_goal_id,))
+    goal = c.fetchone()
+    title, amount_inr, years = goal
 
-# Weekly, Monthly, Daily amount to send
-weekly_inr_needed = total_loan_inr / weeks
-monthly_inr_needed = total_loan_inr / months
-daily_inr_needed = total_loan_inr / days
+    st.title(f"📌 {title} Tracker")
+    loan_words = num2words(round(amount_inr), lang='en_IN').title()
+    st.caption(f"Target: ₹{amount_inr:,.0f} ({loan_words} Rupees)")
 
-# Convert to USD
-weekly_usd_needed = weekly_inr_needed / exchange_rate
-monthly_usd_needed = monthly_inr_needed / exchange_rate
-daily_usd_needed = daily_inr_needed / exchange_rate
-yearly_usd_needed = (total_loan_inr / exchange_rate) / repay_years
+    # Calculations
+    days = int(years * 365)
+    weeks = int(years * 52)
+    months = int(years * 12)
 
-# Show Targets
-st.header("📊 How Much You Need to Send & Earn")
-st.metric("Per Week: Send", f"₹{weekly_inr_needed:,.0f} → ${weekly_usd_needed:,.2f}")
-st.metric("Per Month: Send", f"₹{monthly_inr_needed:,.0f} → ${monthly_usd_needed:,.2f}")
-st.metric("Per Day: Earn", f"₹{daily_inr_needed:,.0f} → ${daily_usd_needed:,.2f}")
-st.metric("Per Year: Send", f"${yearly_usd_needed:,.2f}")
+    daily_inr = amount_inr / days
+    weekly_inr = amount_inr / weeks
+    monthly_inr = amount_inr / months
 
-# Step 3: Payment Logging
-st.header("3️⃣ Log Your Weekly USD Payment")
+    daily_usd = daily_inr / exchange_rate
+    weekly_usd = weekly_inr / exchange_rate
+    monthly_usd = monthly_inr / exchange_rate
+    yearly_usd = amount_inr / exchange_rate / years
 
-if total_loan_inr > 0 and repay_years > 0:
+    st.metric("Daily Send Target", f"${daily_usd:,.2f} → ₹{daily_inr:,.0f}")
+    st.metric("Weekly Send Target", f"${weekly_usd:,.2f} → ₹{weekly_inr:,.0f}")
+    st.metric("Monthly Send Target", f"${monthly_usd:,.2f} → ₹{monthly_inr:,.0f}")
+    st.metric("Yearly Total (USD)", f"${yearly_usd:,.2f}")
+
+    # Log Payment
+    st.subheader("💵 Log a Payment")
     with st.form("payment_form"):
-        usd_sent = st.number_input("USD Sent This Week", min_value=0.0, step=1.0)
+        usd_sent = st.number_input("USD Sent", min_value=0.0, step=1.0)
         pay_date = st.date_input("Date", value=datetime.today())
         submitted = st.form_submit_button("Log Payment")
 
         if submitted:
             inr_equiv = usd_sent * exchange_rate
-            c.execute("INSERT INTO payments (date, usd_sent, inr_equiv) VALUES (?, ?, ?)",
-                      (pay_date.strftime("%Y-%m-%d"), usd_sent, inr_equiv))
+            c.execute("INSERT INTO payments (goal_id, date, usd_sent, inr_equiv) VALUES (?, ?, ?, ?)",
+                      (selected_goal_id, pay_date.strftime("%Y-%m-%d"), usd_sent, inr_equiv))
             conn.commit()
-            st.success("✅ Payment logged successfully!")
+            st.success("✅ Payment logged!")
+
+    # Progress
+    st.subheader("📊 Progress")
+    c.execute("SELECT usd_sent, inr_equiv FROM payments WHERE goal_id = ?", (selected_goal_id,))
+    payments = c.fetchall()
+    paid_inr = sum([p[1] for p in payments])
+    remaining = amount_inr - paid_inr
+    percent = (paid_inr / amount_inr) * 100 if amount_inr > 0 else 0
+
+    st.progress(min(percent / 100, 1.0))
+    st.write(f"**Paid:** ₹{paid_inr:,.0f} / ₹{amount_inr:,.0f} ({percent:.2f}%)")
+    st.write(f"**Remaining:** ₹{remaining:,.0f}")
+
+    # Daily Reminder
+    st.subheader("📅 Daily Reminder")
+    daily_needed_inr = remaining / days
+    daily_needed_usd = daily_needed_inr / exchange_rate
+
+    if remaining <= 0:
+        st.success("🎉 Goal completed!")
+    else:
+        st.metric("Earn Today", f"${daily_needed_usd:,.2f} → ₹{daily_needed_inr:,.0f}")
+        st.caption("“Keep going — every ₹ counts!”")
 else:
-    st.warning("⚠️ Please enter your loan amount and repayment years first.")
-
-# Step 4: Show Progress
-st.header("4️⃣ Payment Progress")
-payments = c.execute("SELECT usd_sent, inr_equiv FROM payments").fetchall()
-paid_inr = sum([p[1] for p in payments])
-remaining_inr = total_loan_inr - paid_inr
-percent = (paid_inr / total_loan_inr) * 100 if total_loan_inr > 0 else 0
-
-st.progress(min(percent / 100, 1.0))
-st.write(f"**Total Paid:** ₹{paid_inr:,.0f}")
-st.write(f"**Remaining:** ₹{remaining_inr:,.0f}")
-st.write(f"**Completed:** {percent:.2f}%")
-
-# Step 5: Show History
-st.header("📒 Payment History")
-if payments:
-    st.table([{"USD Sent": p[0], "INR Value": p[1]} for p in payments])
-else:
-    st.info("No payments logged yet.")
-    # ---------------- DAILY REMINDER SECTION ----------------
-st.header("📅 Daily Earning Reminder")
-
-# ---------------- DAILY REMINDER SECTION ----------------
-st.header("📅 Daily Earning Reminder")
-
-# Ensure repayment years are set
-if 'repay_years' in locals() and remaining_inr > 0:
-    days_left = repay_years * 365
-    daily_inr_needed = remaining_inr / days_left
-    daily_usd_needed = daily_inr_needed / exchange_rate
-
-    st.info("To stay on track, you need to:")
-    st.metric("💸 Earn Today", f"${daily_usd_needed:,.2f} → ₹{daily_inr_needed:,.0f}")
-    st.write(f"📍 You still have ₹{remaining_inr:,.0f} to pay in {days_left} days.")
-
-    st.caption("“A small daily target leads to big wins. Keep going!” 🚀")
-elif remaining_inr <= 0:
-    st.success("🎉 Loan fully paid! You did it!")
-else:
-    st.warning("Please set your repayment years to calculate daily target.")
-# ---------------- RESET BUTTON ----------------
-st.sidebar.header("🧹 Reset All Data")
-if st.sidebar.button("🔄 Reset My Loan & Payments"):
-    # Clear the database
-    c.execute("DELETE FROM payments")
-    conn.commit()
-    st.success("✅ All payment history cleared. You can now start a new loan!")
-
-
-
+    st.warning("No goal selected. Please create or select one from the sidebar.")
