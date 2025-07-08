@@ -75,11 +75,12 @@ if selected_goal_id:
     daily_inr = amount_inr / days
     weekly_inr = amount_inr / weeks
     monthly_inr = amount_inr / months
+    yearly_inr = amount_inr / years
 
     daily_usd = daily_inr / exchange_rate
     weekly_usd = weekly_inr / exchange_rate
     monthly_usd = monthly_inr / exchange_rate
-    yearly_usd = amount_inr / exchange_rate / years
+    yearly_usd = yearly_inr / exchange_rate
 
     st.metric("Daily Send Target", f"${daily_usd:,.2f} → ₹{daily_inr:,.0f}")
     st.metric("Weekly Send Target", f"${weekly_usd:,.2f} → ₹{weekly_inr:,.0f}")
@@ -112,15 +113,35 @@ if selected_goal_id:
     st.write(f"**Paid:** ₹{paid_inr:,.0f} / ₹{amount_inr:,.0f} ({percent:.2f}%)")
     st.write(f"**Remaining:** ₹{remaining:,.0f}")
 
-    # Daily Reminder
-    st.subheader("📅 Daily Reminder")
-    daily_needed_inr = remaining / days
-    daily_needed_usd = daily_needed_inr / exchange_rate
+    # Daily Reminder with optional manual override
+    st.subheader("📅 Custom Earning Targets")
+    use_custom_target = st.checkbox("✏️ Set custom earning targets")
+    if use_custom_target:
+        custom_daily_usd = st.number_input("Custom Daily USD Goal", min_value=0.0, step=1.0)
+        custom_weekly_usd = st.number_input("Custom Weekly USD Goal", min_value=0.0, step=1.0)
+        custom_monthly_usd = st.number_input("Custom Monthly USD Goal", min_value=0.0, step=1.0)
+        custom_yearly_usd = st.number_input("Custom Yearly USD Goal", min_value=0.0, step=10.0)
 
-    if remaining <= 0:
-        st.success("🎉 Goal completed!")
+        st.metric("Daily", f"${custom_daily_usd:,.2f} → ₹{custom_daily_usd * exchange_rate:,.0f}")
+        st.metric("Weekly", f"${custom_weekly_usd:,.2f} → ₹{custom_weekly_usd * exchange_rate:,.0f}")
+        st.metric("Monthly", f"${custom_monthly_usd:,.2f} → ₹{custom_monthly_usd * exchange_rate:,.0f}")
+        st.metric("Yearly", f"${custom_yearly_usd:,.2f} → ₹{custom_yearly_usd * exchange_rate:,.0f}")
     else:
-        st.metric("Earn Today", f"${daily_needed_usd:,.2f} → ₹{daily_needed_inr:,.0f}")
+        daily_needed_inr = remaining / days if days > 0 else 0
+        daily_needed_usd = daily_needed_inr / exchange_rate if exchange_rate > 0 else 0
+
+        weekly_needed_inr = remaining / weeks if weeks > 0 else 0
+        weekly_needed_usd = weekly_needed_inr / exchange_rate if exchange_rate > 0 else 0
+
+        monthly_needed_inr = remaining / months if months > 0 else 0
+        monthly_needed_usd = monthly_needed_inr / exchange_rate if exchange_rate > 0 else 0
+
+        yearly_needed_usd = remaining / exchange_rate / years if years > 0 else 0
+
+        st.metric("Daily Goal", f"${daily_needed_usd:,.2f} → ₹{daily_needed_inr:,.0f}")
+        st.metric("Weekly Goal", f"${weekly_needed_usd:,.2f} → ₹{weekly_needed_inr:,.0f}")
+        st.metric("Monthly Goal", f"${monthly_needed_usd:,.2f} → ₹{monthly_needed_inr:,.0f}")
+        st.metric("Yearly Goal", f"${yearly_needed_usd:,.2f} → ₹{remaining:,.0f}")
         st.caption("“Keep going — every ₹ counts!”")
 else:
     st.warning("No goal selected. Please create or select one from the sidebar.")
