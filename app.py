@@ -76,41 +76,31 @@ if selected_goal_id:
     st.write(f"**Paid:** ₹{total_paid:,.0f} / ₹{amount_inr:,.0f} ({percent:.2f}%)")
     st.write(f"**Remaining:** ₹{remaining:,.0f}")
 
-    # Custom Earnings
-    st.subheader("📅 Custom Earning Targets")
-    use_custom_target = st.checkbox("✏️ Set custom earning target (INR or USD)")
+    # Daily Goal Entry Only
+    st.subheader("📅 Enter Your Daily Earning Goal")
+    use_custom_target = st.checkbox("✏️ Set daily goal in INR or USD")
     if use_custom_target:
-        input_currency = st.radio("Enter your amount in:", ["INR", "USD"])
-        option = st.selectbox("Enter one of the following:", ["Daily", "Weekly", "Monthly", "Yearly"])
-        amount = st.number_input(f"Enter your {option} {input_currency} goal", min_value=0.0)
+        input_currency = st.radio("Daily earning currency:", ["INR", "USD"])
+        daily_input = st.number_input("Enter your daily earning goal", min_value=0.0)
 
-        # Normalize daily_inr
+        # Convert to INR
         if input_currency == "USD":
-            amount_inr = amount * exchange_rate
+            daily_inr = daily_input * exchange_rate
+            daily_usd = daily_input
         else:
-            amount_inr = amount
+            daily_inr = daily_input
+            daily_usd = daily_input / exchange_rate
 
-        if option == "Daily":
-            daily_inr = amount_inr
-        elif option == "Weekly":
-            daily_inr = amount_inr / 7
-        elif option == "Monthly":
-            daily_inr = amount_inr / 30
-        else:
-            daily_inr = amount_inr / 365
-
-        # Derived values
+        # Calculate others
         weekly_inr = daily_inr * 7
         monthly_inr = daily_inr * 30
         yearly_inr = daily_inr * 365
 
-        # Convert to USD
-        daily_usd = daily_inr / exchange_rate
         weekly_usd = weekly_inr / exchange_rate
         monthly_usd = monthly_inr / exchange_rate
         yearly_usd = yearly_inr / exchange_rate
 
-        # Duration Estimate
+        # Duration Estimates
         total_days = remaining / daily_inr if daily_inr > 0 else 0
         total_weeks = total_days / 7
         total_months = total_days / 30
