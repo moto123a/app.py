@@ -4,21 +4,21 @@ from datetime import datetime
 from forex_python.converter import CurrencyRates
 from num2words import num2words
 
-# ========== DB SETUP ==========
+# DB Setup
 conn = sqlite3.connect('finance_goals.db', check_same_thread=False)
 c = conn.cursor()
 c.execute("CREATE TABLE IF NOT EXISTS goals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, amount REAL, currency TEXT, years REAL)")
 c.execute("CREATE TABLE IF NOT EXISTS payments (id INTEGER PRIMARY KEY AUTOINCREMENT, goal_id INTEGER, date TEXT, usd_sent REAL, inr_equiv REAL)")
 conn.commit()
 
-# ========== EXCHANGE RATE ==========
+# Exchange Rate
 c_rates = CurrencyRates()
 try:
     exchange_rate = c_rates.get_rate('USD', 'INR')
 except:
     exchange_rate = 83.0
 
-# ========== SELECT GOAL ==========
+# Sidebar - Select or Create Goal
 st.sidebar.header("🎯 Your Financial Goals")
 c.execute("SELECT id, title FROM goals")
 goals = c.fetchall()
@@ -28,40 +28,36 @@ goal_ids = [g[0] for g in goals]
 selected_goal_index = st.sidebar.selectbox("Select a Goal", list(range(len(goal_titles))), format_func=lambda i: goal_titles[i]) if goals else None
 selected_goal_id = goal_ids[selected_goal_index] if selected_goal_index is not None else None
 
-# ========== CREATE NEW GOAL ==========
 st.sidebar.markdown("---")
 st.sidebar.subheader("➕ Create New Goal")
 with st.sidebar.form("new_goal_form"):
-    new_title = st.text_input("Title (e.g., 'Loan', 'Buy a Car')")
-    new_amount = st.number_input("Target Amount", min_value=0.0, step=1000.0, format="%.2f")
+    new_title = st.text_input("Title (e.g., Loan, Buy a Bike)")
+    new_amount = st.number_input("Target Amount", min_value=0.0, step=1000.0)
     new_currency = st.radio("Currency", ["INR", "USD"])
-    new_years = st.number_input("Payoff Duration (Years)", min_value=0.1, step=0.1, format="%.1f")
+    new_years = st.number_input("Planned Duration (years)", min_value=0.1, step=0.1)
     create_goal = st.form_submit_button("Create Goal")
 
 if create_goal and new_title:
     final_amount = new_amount * exchange_rate if new_currency == "USD" else new_amount
-    c.execute("INSERT INTO goals (title, amount, currency, years) VALUES (?, ?, ?, ?)",
-              (new_title, final_amount, "INR", new_years))
+    c.execute("INSERT INTO goals (title, amount, currency, years) VALUES (?, ?, ?, ?)", (new_title, final_amount, "INR", new_years))
     conn.commit()
-    st.success("🎉 New goal created! Refresh the page to see it in the list.")
+    st.success("🎯 New goal created! Refresh the page.")
 
-# ========== SHOW SELECTED GOAL ==========
+# Main App - Show Selected Goal
 if selected_goal_id:
     c.execute("SELECT title, amount FROM goals WHERE id = ?", (selected_goal_id,))
     goal = c.fetchone()
     title, amount_inr = goal
 
     st.title(f"📌 {title} Tracker")
-    loan_words = num2words(round(amount_inr), lang='en_IN').title()
-    st.caption(f"Target: ₹{amount_inr:,.0f} ({loan_words} Rupees)")
+    st.caption(f"Target: ₹{amount_inr:,.0f} ({num2words(round(amount_inr), lang='en_IN').title()} Rupees)")
 
-    # Log Payment
+    # Log Payments
     st.subheader("💵 Log a Payment")
     with st.form("payment_form"):
         usd_sent = st.number_input("USD Sent", min_value=0.0, step=1.0)
         pay_date = st.date_input("Date", value=datetime.today())
         submitted = st.form_submit_button("Log Payment")
-
         if submitted:
             inr_equiv = usd_sent * exchange_rate
             c.execute("INSERT INTO payments (goal_id, date, usd_sent, inr_equiv) VALUES (?, ?, ?, ?)",
@@ -69,66 +65,57 @@ if selected_goal_id:
             conn.commit()
             st.success("✅ Payment logged!")
 
-    # Progress
+    # Progress Section
     st.subheader("📊 Progress")
-    c.execute("SELECT usd_sent, inr_equiv FROM payments WHERE goal_id = ?", (selected_goal_id,))
-    payments = c.fetchall()
-    paid_inr = sum([p[1] for p in payments])
-    remaining = amount_inr - paid_inr
-    percent = (paid_inr / amount_inr) * 100 if amount_inr > 0 else 0
+    c.execute("SELECT inr_equiv FROM payments WHERE goal_id = ?", (selected_goal_id,))
+    total_paid = sum([p[0] for p in c.fetchall()])
+    remaining = amount_inr - total_paid
+    percent = total_paid / amount_inr * 100 if amount_inr > 0 else 0
 
     st.progress(min(percent / 100, 1.0))
-    st.write(f"**Paid:** ₹{paid_inr:,.0f} / ₹{amount_inr:,.0f} ({percent:.2f}%)")
+    st.write(f"**Paid:** ₹{total_paid:,.0f} / ₹{amount_inr:,.0f} ({percent:.2f}%)")
     st.write(f"**Remaining:** ₹{remaining:,.0f}")
 
-    # Custom earning targets only
+    # Custom Targets Section
     st.subheader("📅 Custom Earning Targets")
-    use_custom_target = st.checkbox("✏️ Set custom earning targets")
+    use_custom_target = st.checkbox("✏️ Set your own earning target")
     if use_custom_target:
-        custom_input = st.selectbox("Which one do you want to enter?", ["Daily", "Weekly", "Monthly", "Yearly"])
-        input_usd = st.number_input(f"Enter your {custom_input} USD Goal", min_value=0.0, step=1.0)
+        option = st.selectbox("Enter one of the following:", ["Daily", "Weekly", "Monthly", "Yearly"])
+        usd_value = st.number_input(f"Enter your {option} USD goal", min_value=0.0)
 
-        if custom_input == "Daily":
-            daily_usd = input_usd
-            weekly_usd = daily_usd * 7
-            monthly_usd = daily_usd * 30
-            yearly_usd = daily_usd * 365
-        elif custom_input == "Weekly":
-            weekly_usd = input_usd
-            daily_usd = weekly_usd / 7
-            monthly_usd = daily_usd * 30
-            yearly_usd = daily_usd * 365
-        elif custom_input == "Monthly":
-            monthly_usd = input_usd
-            daily_usd = monthly_usd / 30
-            weekly_usd = daily_usd * 7
-            yearly_usd = daily_usd * 365
+        if option == "Daily":
+            daily_usd = usd_value
+        elif option == "Weekly":
+            daily_usd = usd_value / 7
+        elif option == "Monthly":
+            daily_usd = usd_value / 30
         else:
-            yearly_usd = input_usd
-            daily_usd = yearly_usd / 365
-            weekly_usd = daily_usd * 7
-            monthly_usd = daily_usd * 30
+            daily_usd = usd_value / 365
+
+        # Derived values
+        weekly_usd = daily_usd * 7
+        monthly_usd = daily_usd * 30
+        yearly_usd = daily_usd * 365
 
         # Duration Estimate
-        total_inr = amount_inr
-        if daily_usd > 0:
-            daily_inr = daily_usd * exchange_rate
-            total_days = total_inr / daily_inr
-            total_weeks = total_days / 7
-            total_months = total_days / 30
-            total_years = total_days / 365
+        daily_inr = daily_usd * exchange_rate
+        total_days = amount_inr / daily_inr if daily_inr > 0 else 0
+        total_weeks = total_days / 7
+        total_months = total_days / 30
+        total_years = total_days / 365
 
-            st.info(f"To reach ₹{total_inr:,.0f}, you'll need approximately:")
-            st.markdown(f"""
-            - 🗓️ **{total_days:.0f} days**
-            - 📆 **{total_weeks:.1f} weeks**
-            - 📆 **{total_months:.1f} months**
-            - 📅 **{total_years:.2f} years**
-            """)
+        st.info(f"⏳ To reach ₹{amount_inr:,.0f}, you’ll need:")
+        st.markdown(f"""
+        - 🗓️ **{total_days:.0f} days**
+        - 📆 **{total_weeks:.1f} weeks**
+        - 📅 **{total_months:.1f} months**
+        - 🕒 **{total_years:.2f} years**
+        """)
 
         st.metric("Daily", f"${daily_usd:,.2f} → ₹{daily_usd * exchange_rate:,.0f}")
         st.metric("Weekly", f"${weekly_usd:,.2f} → ₹{weekly_usd * exchange_rate:,.0f}")
         st.metric("Monthly", f"${monthly_usd:,.2f} → ₹{monthly_usd * exchange_rate:,.0f}")
         st.metric("Yearly", f"${yearly_usd:,.2f} → ₹{yearly_usd * exchange_rate:,.0f}")
+
 else:
-    st.warning("No goal selected. Please create or select one from the sidebar.")
+    st.warning("No goal selected. Please create one from the sidebar.")
