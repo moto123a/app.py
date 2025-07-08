@@ -76,21 +76,28 @@ if selected_goal_id:
     st.write(f"**Paid:** ₹{total_paid:,.0f} / ₹{amount_inr:,.0f} ({percent:.2f}%)")
     st.write(f"**Remaining:** ₹{remaining:,.0f}")
 
-    # Custom Targets Section (in INR)
-    st.subheader("📅 Custom Earning Targets in INR")
-    use_custom_target = st.checkbox("✏️ Set your own earning target in INR")
+    # Custom Earnings
+    st.subheader("📅 Custom Earning Targets")
+    use_custom_target = st.checkbox("✏️ Set custom earning target (INR or USD)")
     if use_custom_target:
+        input_currency = st.radio("Enter your amount in:", ["INR", "USD"])
         option = st.selectbox("Enter one of the following:", ["Daily", "Weekly", "Monthly", "Yearly"])
-        inr_value = st.number_input(f"Enter your {option} INR earning goal", min_value=0.0)
+        amount = st.number_input(f"Enter your {option} {input_currency} goal", min_value=0.0)
+
+        # Normalize daily_inr
+        if input_currency == "USD":
+            amount_inr = amount * exchange_rate
+        else:
+            amount_inr = amount
 
         if option == "Daily":
-            daily_inr = inr_value
+            daily_inr = amount_inr
         elif option == "Weekly":
-            daily_inr = inr_value / 7
+            daily_inr = amount_inr / 7
         elif option == "Monthly":
-            daily_inr = inr_value / 30
+            daily_inr = amount_inr / 30
         else:
-            daily_inr = inr_value / 365
+            daily_inr = amount_inr / 365
 
         # Derived values
         weekly_inr = daily_inr * 7
@@ -104,12 +111,12 @@ if selected_goal_id:
         yearly_usd = yearly_inr / exchange_rate
 
         # Duration Estimate
-        total_days = amount_inr / daily_inr if daily_inr > 0 else 0
+        total_days = remaining / daily_inr if daily_inr > 0 else 0
         total_weeks = total_days / 7
         total_months = total_days / 30
         total_years = total_days / 365
 
-        st.info(f"⏳ To reach ₹{amount_inr:,.0f}, you’ll need:")
+        st.info(f"⏳ To reach ₹{remaining:,.0f}, you’ll need:")
         st.markdown(f"""
         - 🗓️ **{total_days:.0f} days**
         - 📆 **{total_weeks:.1f} weeks**
