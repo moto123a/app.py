@@ -1,4 +1,3 @@
-# --- app.py ---
 import streamlit as st
 import sqlite3
 from datetime import datetime
@@ -8,20 +7,8 @@ from num2words import num2words
 # ========== DB SETUP ==========
 conn = sqlite3.connect('finance_goals.db', check_same_thread=False)
 c = conn.cursor()
-c.execute('''CREATE TABLE IF NOT EXISTS goals (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    amount REAL,
-    currency TEXT,
-    years REAL
-)''')
-c.execute('''CREATE TABLE IF NOT EXISTS payments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    goal_id INTEGER,
-    date TEXT,
-    usd_sent REAL,
-    inr_equiv REAL
-)''')
+c.execute("CREATE TABLE IF NOT EXISTS goals (id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT, amount REAL, currency TEXT, years REAL)")
+c.execute("CREATE TABLE IF NOT EXISTS payments (id INTEGER PRIMARY KEY AUTOINCREMENT, goal_id INTEGER, date TEXT, usd_sent REAL, inr_equiv REAL)")
 conn.commit()
 
 # ========== EXCHANGE RATE ==========
@@ -29,7 +16,7 @@ c_rates = CurrencyRates()
 try:
     exchange_rate = c_rates.get_rate('USD', 'INR')
 except:
-    exchange_rate = 83.0  # fallback
+    exchange_rate = 83.0
 
 # ========== SELECT GOAL ==========
 st.sidebar.header("🎯 Your Financial Goals")
@@ -60,33 +47,13 @@ if create_goal and new_title:
 
 # ========== SHOW SELECTED GOAL ==========
 if selected_goal_id:
-    c.execute("SELECT title, amount, years FROM goals WHERE id = ?", (selected_goal_id,))
+    c.execute("SELECT title, amount FROM goals WHERE id = ?", (selected_goal_id,))
     goal = c.fetchone()
-    title, amount_inr, years = goal
+    title, amount_inr = goal
 
     st.title(f"📌 {title} Tracker")
     loan_words = num2words(round(amount_inr), lang='en_IN').title()
     st.caption(f"Target: ₹{amount_inr:,.0f} ({loan_words} Rupees)")
-
-    # Calculations
-    days = int(years * 365)
-    weeks = int(years * 52)
-    months = int(years * 12)
-
-    daily_inr = amount_inr / days
-    weekly_inr = amount_inr / weeks
-    monthly_inr = amount_inr / months
-    yearly_inr = amount_inr / years
-
-    daily_usd = daily_inr / exchange_rate
-    weekly_usd = weekly_inr / exchange_rate
-    monthly_usd = monthly_inr / exchange_rate
-    yearly_usd = yearly_inr / exchange_rate
-
-    st.metric("Daily Send Target", f"${daily_usd:,.2f} → ₹{daily_inr:,.0f} ({days} days)")
-    st.metric("Weekly Send Target", f"${weekly_usd:,.2f} → ₹{weekly_inr:,.0f} ({weeks} weeks)")
-    st.metric("Monthly Send Target", f"${monthly_usd:,.2f} → ₹{monthly_inr:,.0f} ({months} months)")
-    st.metric("Yearly Total (USD)", f"${yearly_usd:,.2f} → ₹{yearly_inr:,.0f} ({years:.1f} years)")
 
     # Log Payment
     st.subheader("💵 Log a Payment")
@@ -114,7 +81,7 @@ if selected_goal_id:
     st.write(f"**Paid:** ₹{paid_inr:,.0f} / ₹{amount_inr:,.0f} ({percent:.2f}%)")
     st.write(f"**Remaining:** ₹{remaining:,.0f}")
 
-    # Daily Reminder with optional manual override
+    # Custom earning targets only
     st.subheader("📅 Custom Earning Targets")
     use_custom_target = st.checkbox("✏️ Set custom earning targets")
     if use_custom_target:
@@ -163,24 +130,5 @@ if selected_goal_id:
         st.metric("Weekly", f"${weekly_usd:,.2f} → ₹{weekly_usd * exchange_rate:,.0f}")
         st.metric("Monthly", f"${monthly_usd:,.2f} → ₹{monthly_usd * exchange_rate:,.0f}")
         st.metric("Yearly", f"${yearly_usd:,.2f} → ₹{yearly_usd * exchange_rate:,.0f}")
-
-    else:
-        # Auto target suggestion
-        daily_needed_inr = remaining / days if days > 0 else 0
-        daily_needed_usd = daily_needed_inr / exchange_rate if exchange_rate > 0 else 0
-
-        weekly_needed_inr = remaining / weeks if weeks > 0 else 0
-        weekly_needed_usd = weekly_needed_inr / exchange_rate if exchange_rate > 0 else 0
-
-        monthly_needed_inr = remaining / months if months > 0 else 0
-        monthly_needed_usd = monthly_needed_inr / exchange_rate if exchange_rate > 0 else 0
-
-        yearly_needed_usd = remaining / exchange_rate / years if years > 0 else 0
-
-        st.metric("Daily Goal", f"${daily_needed_usd:,.2f} → ₹{daily_needed_inr:,.0f} ({days} days)")
-        st.metric("Weekly Goal", f"${weekly_needed_usd:,.2f} → ₹{weekly_needed_inr:,.0f} ({weeks} weeks)")
-        st.metric("Monthly Goal", f"${monthly_needed_usd:,.2f} → ₹{monthly_needed_inr:,.0f} ({months} months)")
-        st.metric("Yearly Goal", f"${yearly_needed_usd:,.2f} → ₹{remaining:,.0f} ({years:.1f} years)")
-        st.caption("“Keep going — every ₹ counts!”")
 else:
     st.warning("No goal selected. Please create or select one from the sidebar.")
