@@ -117,10 +117,34 @@ if selected_goal_id:
     st.subheader("📅 Custom Earning Targets")
     use_custom_target = st.checkbox("✏️ Set custom earning targets")
     if use_custom_target:
-        custom_daily_usd = st.number_input("Custom Daily USD Goal", min_value=0.0, step=1.0)
-        custom_weekly_usd = st.number_input("Custom Weekly USD Goal", min_value=0.0, step=1.0)
-        custom_monthly_usd = st.number_input("Custom Monthly USD Goal", min_value=0.0, step=1.0)
-        custom_yearly_usd = st.number_input("Custom Yearly USD Goal", min_value=0.0, step=10.0)
+        custom_input = st.selectbox("Which one do you want to enter?", ["Daily", "Weekly", "Monthly", "Yearly"])
+        input_usd = st.number_input(f"Enter your {custom_input} USD Goal", min_value=0.0, step=1.0)
+
+        if custom_input == "Daily":
+            daily_usd = input_usd
+            weekly_usd = daily_usd * 7
+            monthly_usd = daily_usd * 30
+            yearly_usd = daily_usd * 365
+        elif custom_input == "Weekly":
+            weekly_usd = input_usd
+            daily_usd = weekly_usd / 7
+            monthly_usd = daily_usd * 30
+            yearly_usd = daily_usd * 365
+        elif custom_input == "Monthly":
+            monthly_usd = input_usd
+            daily_usd = monthly_usd / 30
+            weekly_usd = daily_usd * 7
+            yearly_usd = daily_usd * 365
+        else:  # Yearly
+            yearly_usd = input_usd
+            daily_usd = yearly_usd / 365
+            weekly_usd = daily_usd * 7
+            monthly_usd = daily_usd * 30
+
+        st.metric("Daily", f"${daily_usd:,.2f} → ₹{daily_usd * exchange_rate:,.0f}")
+        st.metric("Weekly", f"${weekly_usd:,.2f} → ₹{weekly_usd * exchange_rate:,.0f}")
+        st.metric("Monthly", f"${monthly_usd:,.2f} → ₹{monthly_usd * exchange_rate:,.0f}")
+        st.metric("Yearly", f"${yearly_usd:,.2f} → ₹{yearly_usd * exchange_rate:,.0f}")
 
         st.metric("Daily", f"${custom_daily_usd:,.2f} → ₹{custom_daily_usd * exchange_rate:,.0f}")
         st.metric("Weekly", f"${custom_weekly_usd:,.2f} → ₹{custom_weekly_usd * exchange_rate:,.0f}")
