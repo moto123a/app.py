@@ -95,3 +95,23 @@ if payments:
     st.table([{"USD Sent": p[0], "INR Value": p[1]} for p in payments])
 else:
     st.info("No payments logged yet.")
+    # ---------------- DAILY REMINDER SECTION ----------------
+st.header("📅 Daily Earning Reminder")
+
+# Calculate remaining after payment
+days_left = repay_years * 365
+remaining_inr = total_loan_inr - paid_inr
+
+if remaining_inr <= 0:
+    st.success("🎉 Loan fully paid! You did it!")
+else:
+    daily_inr_needed = remaining_inr / days_left
+    daily_usd_needed = daily_inr_needed / exchange_rate
+
+    st.info("To stay on track, you need to:")
+    st.metric("💸 Earn Today", f"${daily_usd_needed:,.2f} → ₹{daily_inr_needed:,.0f}")
+    st.write(f"📍 You still have ₹{remaining_inr:,.0f} to pay in {days_left} days.")
+
+    # Optional motivational quote
+    st.caption("“A small daily target leads to big wins. Keep going!” 🚀")
+
