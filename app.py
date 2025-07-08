@@ -40,7 +40,8 @@ st.success(f"({loan_words} Rupees)")
 
 # Step 2: Target Period
 st.header("2️⃣ In How Many Years Will You Pay?")
-repay_years = st.number_input("Enter number of years", min_value=1, step=1)
+repay_years = st.number_input("Enter number of years", min_value=0.1, step=0.1, format="%.1f")
+
 
 weeks = repay_years * 52
 months = repay_years * 12
